@@ -37,7 +37,7 @@ jobs:
 
       - name: Run fuzzing
         run: |
-          ffuf \
+          $HOME/go/bin/ffuf \
             -u "http://localhost:3000/rest/user/login" \
             -X POST \
             -H "Content-Type: application/json" \
