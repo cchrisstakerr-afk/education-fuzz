@@ -37,15 +37,32 @@ jobs:
 
       - name: Run fuzzing
         run: |
-          $HOME/go/bin/ffuf || true
+          ffuf \
+            -u "http://localhost:3000/rest/user/login" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"email":"FUZZ", "password":"any"}' \
+            -w SQL-Injection \
+            -fc 401 \
+            -o ffuf-results.json \
+            -of json \
+            -v || true
 
-      - name: Get Logs from Service
-        run: |
-          docker logs $(docker ps -q) > juice-logs.log
+          if [ -f ffuf-results.json ]; then
+            SUCCESS_COUNT=$(jq '[.results[] | select(.status == 200)] | length' ffuf-results.json 2>/dev/null || echo "0")
+            echo "success_count=$SUCCESS_COUNT" >> $GITHUB_OUTPUT
+            
+            if [ "$SUCCESS_COUNT" -gt 0 ]; then
+              echo "✅ Found $SUCCESS_COUNT successful SQL injections"
+            else
+              echo "❌ No successful SQL injections found"
+            fi
+          fi
 
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: security-reports-bundle
           path: |
-            juice-logs.log
+            ffuf-results.json
+            .github/workflows/fuzzing.yml
